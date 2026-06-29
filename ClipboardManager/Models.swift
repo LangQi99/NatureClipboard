@@ -103,8 +103,8 @@ struct ClipboardItem: Identifiable, Codable, Hashable {
         case .file: return filePaths?.first?.components(separatedBy: "/").last ?? "File"
         case .url: return urlString ?? "URL"
         case .color: return colorHex ?? "Color"
-        case .html: return "HTML Content"
-        case .rtf: return "Rich Text"
+        case .html: return textContent?.prefix(100).description ?? htmlContent?.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression).prefix(100).description ?? "HTML Content"
+        case .rtf: return textContent?.prefix(100).description ?? "Rich Text"
         }
     }
 

@@ -133,6 +133,14 @@ class FloatingPanel: NSPanel {
         let mainView = MainView(closeAction: { [weak self] in self?.animateOut() })
         hostingView = NSHostingView(rootView: mainView)
         contentView = hostingView
+
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(handleResignKey),
+            name: NSWindow.didResignKeyNotification, object: self)
+    }
+
+    @objc private func handleResignKey() {
+        if isVisible { animateOut() }
     }
 
     func show() {

@@ -39,15 +39,16 @@ struct ItemListView: View {
                     if !items.isEmpty { selectedItem = items[selectedIndex] }
                 }
         }
-        .background(theme.cardBackground)
+        .background(Color.clear)
     }
 
     private var listContent: some View {
-        List(selection: $selectedItem) {
+        List {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 rowView(for: item, at: index)
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 2, leading: 6, bottom: 2, trailing: 6))
             }
         }
         .listStyle(.plain)
@@ -58,21 +59,88 @@ struct ItemListView: View {
     private func rowView(for item: ClipboardItem, at index: Int) -> some View {
         ItemRowView(item: item, isSelected: index == selectedIndex, theme: theme)
             .id(item.id)
-            .tag(item)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
             .onTapGesture(count: 2) { onPaste(item) }
             .onTapGesture(count: 1) {
                 selectedItem = item
                 selectedIndex = index
             }
+            .onDrag({
+                selectedItem = item
+                selectedIndex = index
+                return makeDragProvider(for: item)
+            }, preview: {
+                dragPreview(for: item)
+            })
             .contextMenu { contextMenu(for: item) }
+    }
+
+    @ViewBuilder
+    private func dragPreview(for item: ClipboardItem) -> some View {
+        HStack(spacing: 8) {
+            switch item.type {
+            case .image:
+                if let data = item.imageData, let image = NSImage(data: data) {
+                    Image(nsImage: image).resizable().aspectRatio(contentMode: .fit).frame(maxWidth: 80, maxHeight: 60)
+                }
+            case .file:
+                Image(systemName: "doc.fill").font(.system(size: 32)).foregroundColor(.orange)
+                Text(item.filePaths?.first?.components(separatedBy: "/").last ?? "File").lineLimit(1)
+            default:
+                Text(item.displayTitle).lineLimit(2).padding(.horizontal, 8)
+            }
+        }
+        .padding(8)
+        .background(Color.white)
+        .cornerRadius(6)
+    }
+
+    private func makeDragProvider(for item: ClipboardItem) -> NSItemProvider {
+        switch item.type {
+        case .text, .html, .rtf, .url, .color:
+            return NSItemProvider(object: (item.textContent ?? item.urlString ?? item.colorHex ?? "") as NSString)
+        case .image:
+            let provider = NSItemProvider()
+            if let data = item.imageData {
+                provider.registerDataRepresentation(forTypeIdentifier: "public.png", visibility: .all) { completion in
+                    completion(data, nil)
+                    return nil
+                }
+                if let image = NSImage(data: data) {
+                    provider.registerObject(image, visibility: .all)
+                }
+                let tmp = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("clip-\(item.id.uuidString).png")
+                try? data.write(to: tmp)
+                provider.registerFileRepresentation(forTypeIdentifier: "public.png", fileOptions: [], visibility: .all) { completion in
+                    completion(tmp, false, nil)
+                    return nil
+                }
+            }
+            return provider
+        case .file:
+            if let path = item.filePaths?.first {
+                let url = URL(fileURLWithPath: path)
+                let provider = NSItemProvider()
+                provider.registerFileRepresentation(forTypeIdentifier: "public.file-url", fileOptions: [.openInPlace], visibility: .all) { completion in
+                    completion(url, true, nil)
+                    return nil
+                }
+                provider.registerObject(url as NSURL, visibility: .all)
+                return provider
+            }
+            return NSItemProvider()
+        }
     }
 
     private func moveSelection(by offset: Int, proxy: ScrollViewProxy) {
         let newIndex = max(0, min(items.count - 1, selectedIndex + offset))
+        guard newIndex != selectedIndex else { return }
         selectedIndex = newIndex
         if !items.isEmpty {
             selectedItem = items[newIndex]
-            proxy.scrollTo(items[newIndex].id, anchor: .center)
+            proxy.scrollTo(items[newIndex].id)
         }
     }
 

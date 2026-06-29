@@ -73,16 +73,16 @@ class ThemeManager: ObservableObject {
     static let natureColors = ThemeColors(
         background: Color(red: 0.97, green: 0.98, blue: 0.95),
         panelBackground: Color(red: 0.98, green: 0.99, blue: 0.96),
-        cardBackground: Color.white.opacity(0.9),
-        accent: Color(red: 0.35, green: 0.62, blue: 0.38),
-        accentSecondary: Color(red: 0.55, green: 0.78, blue: 0.5),
-        textPrimary: Color(red: 0.22, green: 0.38, blue: 0.26),
-        textSecondary: Color(red: 0.45, green: 0.58, blue: 0.48),
-        border: Color(red: 0.5, green: 0.72, blue: 0.5).opacity(0.2),
-        pillBackground: Color(red: 0.7, green: 0.85, blue: 0.65).opacity(0.18),
-        pillSelectedBackground: Color(red: 0.45, green: 0.7, blue: 0.45).opacity(0.25),
-        searchBarBackground: Color.white.opacity(0.7),
-        shadowColor: Color(red: 0.3, green: 0.5, blue: 0.3).opacity(0.1),
+        cardBackground: Color.white.opacity(0.35),
+        accent: Color(red: 0.2, green: 0.45, blue: 0.25),
+        accentSecondary: Color(red: 0.42, green: 0.65, blue: 0.4),
+        textPrimary: Color(red: 0.08, green: 0.18, blue: 0.1),
+        textSecondary: Color(red: 0.22, green: 0.38, blue: 0.25),
+        border: Color(red: 0.3, green: 0.55, blue: 0.3).opacity(0.3),
+        pillBackground: Color.white.opacity(0.55),
+        pillSelectedBackground: Color(red: 0.3, green: 0.55, blue: 0.3).opacity(0.4),
+        searchBarBackground: Color.white.opacity(0.45),
+        shadowColor: Color(red: 0.3, green: 0.5, blue: 0.3).opacity(0.15),
         material: .sheet
     )
 }

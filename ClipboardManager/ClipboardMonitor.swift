@@ -81,15 +81,20 @@ class ClipboardMonitor: ObservableObject {
             }
         }
 
-        if let html = pasteboard.string(forType: .html) {
+        if let rtfData = pasteboard.data(forType: .rtf) {
             let plainText = pasteboard.string(forType: .string)
-            return ClipboardItem(type: .html, textContent: plainText, htmlContent: html,
+            let html = pasteboard.string(forType: .html)
+            return ClipboardItem(type: .rtf, textContent: plainText, htmlContent: html, rtfData: rtfData,
                                 appName: appName, appBundleId: bundleId)
         }
 
-        if let rtfData = pasteboard.data(forType: .rtf) {
+        if let html = pasteboard.string(forType: .html) {
             let plainText = pasteboard.string(forType: .string)
-            return ClipboardItem(type: .rtf, textContent: plainText, rtfData: rtfData,
+            if let text = plainText, !text.isEmpty {
+                return ClipboardItem(type: .rtf, textContent: text, htmlContent: html,
+                                    appName: appName, appBundleId: bundleId)
+            }
+            return ClipboardItem(type: .html, textContent: plainText, htmlContent: html,
                                 appName: appName, appBundleId: bundleId)
         }
 

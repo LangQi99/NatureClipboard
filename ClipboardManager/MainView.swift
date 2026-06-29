@@ -69,6 +69,8 @@ struct MainView: View {
                 .stroke(theme.border, lineWidth: 1)
         )
         .shadow(color: theme.shadowColor, radius: 20, x: 0, y: 10)
+        .tint(theme.accent)
+        .accentColor(theme.accent)
         .scaleEffect(appeared ? 1.0 : 0.97)
         .onAppear {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
@@ -79,13 +81,21 @@ struct MainView: View {
             SnippetsView()
                 .environmentObject(store)
         }
+        .onAppear {
+            if selectedItem == nil, let first = store.filteredItems.first {
+                selectedItem = first
+            }
+        }
+        .onChange(of: store.filteredItems) { _, items in
+            if selectedItem == nil || !items.contains(where: { $0.id == selectedItem?.id }) {
+                selectedItem = items.first
+            }
+        }
     }
 
     private func pasteAndClose(_ item: ClipboardItem) {
         closeAction()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            store.pasteItem(item)
-        }
+        store.pasteItem(item)
     }
 
     @ViewBuilder
@@ -108,8 +118,7 @@ struct MainView: View {
 }
 
 struct NatureBackground: View {
-    @State private var leafPhase: CGFloat = 0
-    @State private var bubblePhase: CGFloat = 0
+    private static let startTime = Date()
 
     private let canopyGreens: [Color] = [
         Color(red: 0.22, green: 0.45, blue: 0.22),
@@ -120,59 +129,52 @@ struct NatureBackground: View {
     ]
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                Color(red: 0.975, green: 0.985, blue: 0.96)
-
-                RoundedRectangle(cornerRadius: 0)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(red: 0.48, green: 0.72, blue: 0.4),
-                                Color(red: 0.38, green: 0.62, blue: 0.32)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(height: 42)
-                    .frame(maxWidth: .infinity)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-
+        TimelineView(.animation) { context in
+            let elapsed = context.date.timeIntervalSince(Self.startTime)
+            GeometryReader { geo in
                 ZStack {
-                    Capsule()
-                        .fill(Color(red: 0.45, green: 0.32, blue: 0.22))
-                        .frame(width: 12, height: 200)
-                        .offset(y: 30)
+                    Color(red: 0.975, green: 0.985, blue: 0.96)
 
-                    Capsule()
-                        .fill(Color(red: 0.4, green: 0.28, blue: 0.2))
-                        .frame(width: 7, height: 110)
-                        .rotationEffect(.degrees(-22))
-                        .offset(x: -35, y: -25)
+                    RoundedRectangle(cornerRadius: 0)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color(red: 0.48, green: 0.72, blue: 0.4),
+                                    Color(red: 0.38, green: 0.62, blue: 0.32)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(height: 42)
+                        .frame(maxWidth: .infinity)
+                        .frame(maxHeight: .infinity, alignment: .bottom)
 
-                    Capsule()
-                        .fill(Color(red: 0.4, green: 0.28, blue: 0.2))
-                        .frame(width: 6, height: 90)
-                        .rotationEffect(.degrees(18))
-                        .offset(x: 28, y: -35)
+                    ZStack {
+                        Capsule()
+                            .fill(Color(red: 0.45, green: 0.32, blue: 0.22))
+                            .frame(width: 12, height: 200)
+                            .offset(y: 30)
 
-                    canopyShape
+                        Capsule()
+                            .fill(Color(red: 0.4, green: 0.28, blue: 0.2))
+                            .frame(width: 7, height: 110)
+                            .rotationEffect(.degrees(-22))
+                            .offset(x: -35, y: -25)
+
+                        Capsule()
+                            .fill(Color(red: 0.4, green: 0.28, blue: 0.2))
+                            .frame(width: 6, height: 90)
+                            .rotationEffect(.degrees(18))
+                            .offset(x: 28, y: -35)
+
+                        canopyShape
+                    }
+                    .position(x: geo.size.width / 2, y: geo.size.height - 130)
+
+                    fallingLeaves(in: geo.size, time: elapsed)
+                    oxygenBubbles(in: geo.size, time: elapsed)
                 }
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .bottomTrailing)
-                .offset(x: -20, y: -40)
-
-                fallingLeaves(in: geo.size)
-
-                oxygenBubbles(in: geo.size)
-            }
-        }
-        .onAppear {
-            withAnimation(.linear(duration: 30).repeatForever(autoreverses: false)) {
-                leafPhase = 1
-            }
-            withAnimation(.linear(duration: 20).repeatForever(autoreverses: false)) {
-                bubblePhase = 1
             }
         }
     }
@@ -191,14 +193,16 @@ struct NatureBackground: View {
     }
 
     @ViewBuilder
-    private func fallingLeaves(in size: CGSize) -> some View {
-        ForEach(0..<14, id: \.self) { i in
+    private func fallingLeaves(in size: CGSize, time: Double) -> some View {
+        let xPositions: [CGFloat] = [0.96, 0.93, 0.89, 0.85, 0.81, 0.94, 0.87, 0.83]
+        let yPhases: [Double] = [0.0, 0.13, 0.27, 0.4, 0.55, 0.68, 0.82, 0.92]
+        let cycleDuration = 18.0
+        ForEach(0..<8, id: \.self) { i in
             let seed = Double(i)
-            let xPos = CGFloat((seed * 73).truncatingRemainder(dividingBy: 1.0)) * size.width
-            let baseY = CGFloat((seed * 37).truncatingRemainder(dividingBy: 1.0)) * size.height
-            let drift = sin(leafPhase * .pi * 2 + seed) * 30
-            let yOffset = (leafPhase * size.height * 0.6 + baseY).truncatingRemainder(dividingBy: size.height)
-            let rotation = leafPhase * 360 + seed * 45
+            let phase = (time / cycleDuration + yPhases[i]).truncatingRemainder(dividingBy: 1.0)
+            let yPos = CGFloat(phase) * size.height
+            let drift = sin(phase * .pi * 4 + seed) * 22
+            let rotation = phase * 720 + seed * 45
 
             Image(systemName: "leaf.fill")
                 .font(.system(size: CGFloat(11 + (i % 4) * 4)))
@@ -210,32 +214,52 @@ struct NatureBackground: View {
                     ][i % 3]
                 )
                 .rotationEffect(.degrees(rotation))
-                .position(x: xPos + drift, y: yOffset)
+                .position(x: xPositions[i] * size.width + drift, y: yPos)
         }
     }
 
     @ViewBuilder
-    private func oxygenBubbles(in size: CGSize) -> some View {
-        ForEach(0..<6, id: \.self) { i in
+    private func oxygenBubbles(in size: CGSize, time: Double) -> some View {
+        let canopyCenterX = size.width / 2
+        let canopyTopY = size.height - 230
+        let emissions: [(CGFloat, CGFloat)] = [
+            (canopyCenterX - 70, canopyTopY + 20),
+            (canopyCenterX + 10, canopyTopY - 10),
+            (canopyCenterX + 70, canopyTopY + 10),
+            (canopyCenterX - 30, canopyTopY + 30),
+            (canopyCenterX + 30, canopyTopY - 20),
+            (canopyCenterX, canopyTopY - 40),
+            (canopyCenterX - 90, canopyTopY + 40),
+            (canopyCenterX + 90, canopyTopY + 30),
+            (canopyCenterX + 50, canopyTopY + 50),
+            (canopyCenterX - 50, canopyTopY - 10)
+        ]
+        let cycleDuration = 10.0
+        ForEach(0..<emissions.count, id: \.self) { i in
             let seed = Double(i)
-            let xPos = CGFloat((seed * 91).truncatingRemainder(dividingBy: 1.0)) * size.width * 0.8 + size.width * 0.1
-            let baseY = size.height - (CGFloat(bubblePhase) * size.height + CGFloat(seed * 80))
-                .truncatingRemainder(dividingBy: size.height + 100)
-            let drift = sin(bubblePhase * .pi * 2 + seed) * 12
+            let phaseOffset = Double(i) / Double(emissions.count)
+            let progress = (time / cycleDuration + phaseOffset).truncatingRemainder(dividingBy: 1.0)
+            let startY = emissions[i].1
+            let endY: CGFloat = -30
+            let yPos = startY + (endY - startY) * CGFloat(progress)
+            let drift = sin(progress * .pi * 4 + seed) * 14
+            let xPos = emissions[i].0 + drift
             let bubbleSize: CGFloat = 22 + CGFloat(i % 3) * 4
+            let alpha = progress < 0.1 ? progress * 10 : (progress > 0.9 ? (1 - progress) * 10 : 1.0)
 
             ZStack {
                 Circle()
                     .fill(Color.white.opacity(0.9))
                     .frame(width: bubbleSize, height: bubbleSize)
                 Circle()
-                    .stroke(Color(red: 0.35, green: 0.65, blue: 0.4), lineWidth: 1.6)
+                    .stroke(Color(red: 0.25, green: 0.55, blue: 0.3), lineWidth: 1.6)
                     .frame(width: bubbleSize, height: bubbleSize)
                 Text("O₂")
                     .font(.system(size: bubbleSize * 0.42, weight: .semibold))
-                    .foregroundColor(Color(red: 0.32, green: 0.6, blue: 0.38))
+                    .foregroundColor(Color(red: 0.18, green: 0.45, blue: 0.22))
             }
-            .position(x: xPos + drift, y: baseY)
+            .opacity(alpha)
+            .position(x: xPos, y: yPos)
         }
     }
 }
