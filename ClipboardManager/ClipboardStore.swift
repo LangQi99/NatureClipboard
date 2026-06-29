@@ -144,8 +144,14 @@ class ClipboardStore: ObservableObject {
                 pasteboard.setString(text, forType: .string)
             }
         case .rtf:
+            if let text = item.textContent {
+                pasteboard.setString(text, forType: .string)
+            }
             if let data = item.rtfData {
                 pasteboard.setData(data, forType: .rtf)
+            }
+            if let html = item.htmlContent {
+                pasteboard.setString(html, forType: .html)
             }
         }
 
@@ -204,7 +210,7 @@ class ClipboardStore: ObservableObject {
     }
 
     private func simulatePaste() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.03) {
             let source = CGEventSource(stateID: .hidSystemState)
             let keyDown = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: true)
             let keyUp = CGEvent(keyboardEventSource: source, virtualKey: 0x09, keyDown: false)

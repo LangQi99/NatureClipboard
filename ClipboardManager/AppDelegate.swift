@@ -245,20 +245,10 @@ class FloatingPanel: NSPanel {
     }
 
     func animateOut() {
-        let startFrame = frame
-        var endFrame = startFrame
-        endFrame.origin.y -= 15
-
-        NSAnimationContext.runAnimationGroup({ context in
-            context.duration = 0.2
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            self.animator().alphaValue = 0
-            self.animator().setFrame(endFrame, display: true)
-        }, completionHandler: {
-            self.orderOut(nil)
-            self.setFrame(startFrame, display: false)
-            self.previousApp?.activate(options: [])
-        })
+        let prev = previousApp
+        alphaValue = 0
+        orderOut(nil)
+        prev?.activate(options: [])
     }
 
     override func close() {
