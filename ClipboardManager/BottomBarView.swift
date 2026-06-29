@@ -40,8 +40,7 @@ struct BottomBarView: View {
 
             HStack(spacing: 4) {
                 Image(systemName: "command")
-                Image(systemName: "shift")
-                Text("V")
+                Text("E")
             }
             .font(.system(size: 9))
             .padding(.horizontal, 6)

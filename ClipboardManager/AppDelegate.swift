@@ -86,9 +86,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 let delegate = Unmanaged<AppDelegate>.fromOpaque(refcon).takeUnretainedValue()
                 let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
                 let flags = event.flags
-                if keyCode == Int64(kVK_ANSI_V)
+                if keyCode == Int64(kVK_ANSI_E)
                     && flags.contains(.maskCommand)
-                    && flags.contains(.maskShift)
+                    && !flags.contains(.maskShift)
                     && !flags.contains(.maskAlternate)
                     && !flags.contains(.maskControl) {
                     DispatchQueue.main.async {
@@ -147,10 +147,11 @@ class KeyEventBus: ObservableObject {
 
 class FloatingPanel: NSPanel {
     private var hostingView: NSHostingView<MainView>?
+    var previousApp: NSRunningApplication?
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        if flags == [.command, .shift] && event.keyCode == UInt16(kVK_ANSI_V) {
+        if flags == .command && event.keyCode == UInt16(kVK_ANSI_E) {
             (NSApp.delegate as? AppDelegate)?.togglePanel()
             return true
         }
@@ -160,7 +161,7 @@ class FloatingPanel: NSPanel {
     override func sendEvent(_ event: NSEvent) {
         if event.type == .keyDown {
             let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-            if flags == [.command, .shift] && event.keyCode == UInt16(kVK_ANSI_V) {
+            if flags == .command && event.keyCode == UInt16(kVK_ANSI_E) {
                 (NSApp.delegate as? AppDelegate)?.togglePanel()
                 return
             }
@@ -225,6 +226,7 @@ class FloatingPanel: NSPanel {
     }
 
     func animateIn() {
+        previousApp = NSWorkspace.shared.frontmostApplication
         alphaValue = 0
         center()
         let finalFrame = frame
@@ -255,6 +257,7 @@ class FloatingPanel: NSPanel {
         }, completionHandler: {
             self.orderOut(nil)
             self.setFrame(startFrame, display: false)
+            self.previousApp?.activate(options: [])
         })
     }
 

@@ -44,7 +44,7 @@ struct GeneralSettingsView: View {
             }
 
             Section("Shortcut") {
-                Text("Global shortcut: ⇧⌘V")
+                Text("Global shortcut: ⌘E")
                     .foregroundColor(.secondary)
             }
         }

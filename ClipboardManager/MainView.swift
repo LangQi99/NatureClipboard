@@ -105,7 +105,9 @@ struct MainView: View {
 
     private func pasteAndClose(_ item: ClipboardItem) {
         closeAction()
-        store.pasteItem(item)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            store.pasteItem(item)
+        }
     }
 
     private func moveSelection(by offset: Int) {
