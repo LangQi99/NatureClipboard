@@ -16,27 +16,12 @@ struct ItemListView: View {
     var body: some View {
         ScrollViewReader { proxy in
             listContent
-                .onKeyPress(.upArrow) {
-                    moveSelection(by: -1, proxy: proxy)
-                    return .handled
-                }
-                .onKeyPress(.downArrow) {
-                    moveSelection(by: 1, proxy: proxy)
-                    return .handled
-                }
-                .onKeyPress(.return) {
-                    if let item = selectedItem { onPaste(item) }
-                    return .handled
-                }
-                .onKeyPress(.delete) {
-                    if let item = selectedItem { onDelete(item) }
-                    return .handled
-                }
-                .onChange(of: items) { _, _ in
-                    if selectedIndex >= items.count {
-                        selectedIndex = max(0, items.count - 1)
+                .onChange(of: selectedItem?.id) { _, newId in
+                    if let id = newId {
+                        withAnimation(.easeOut(duration: 0.12)) {
+                            proxy.scrollTo(id)
+                        }
                     }
-                    if !items.isEmpty { selectedItem = items[selectedIndex] }
                 }
         }
         .background(Color.clear)
@@ -57,21 +42,19 @@ struct ItemListView: View {
 
     @ViewBuilder
     private func rowView(for item: ClipboardItem, at index: Int) -> some View {
-        ItemRowView(item: item, isSelected: index == selectedIndex, theme: theme)
+        ItemRowView(item: item, isSelected: selectedItem?.id == item.id, theme: theme)
             .id(item.id)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.white.opacity(0.001))
             .contentShape(Rectangle())
             .onDrag({
                 selectedItem = item
-                selectedIndex = index
                 return makeDragProvider(for: item)
             }, preview: {
                 dragPreview(for: item)
             })
             .onTapGesture {
                 selectedItem = item
-                selectedIndex = index
             }
             .simultaneousGesture(
                 TapGesture(count: 2).onEnded { onPaste(item) }
@@ -127,16 +110,6 @@ struct ItemListView: View {
                 return NSItemProvider(object: url as NSURL)
             }
             return NSItemProvider()
-        }
-    }
-
-    private func moveSelection(by offset: Int, proxy: ScrollViewProxy) {
-        let newIndex = max(0, min(items.count - 1, selectedIndex + offset))
-        guard newIndex != selectedIndex else { return }
-        selectedIndex = newIndex
-        if !items.isEmpty {
-            selectedItem = items[newIndex]
-            proxy.scrollTo(items[newIndex].id)
         }
     }
 
@@ -256,8 +229,23 @@ struct ItemRowView: View {
                     .foregroundColor(theme.accent)
             }
         case .file:
-            Image(systemName: "doc")
-                .foregroundColor(theme.accent)
+            if let path = item.filePaths?.first {
+                let url = URL(fileURLWithPath: path)
+                let ext = url.pathExtension.lowercased()
+                let imageExts: Set<String> = ["png", "jpg", "jpeg", "gif", "heic", "heif", "bmp", "tiff", "webp"]
+                if imageExts.contains(ext), let nsImage = NSImage(contentsOf: url) {
+                    Image(nsImage: nsImage)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: path))
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                }
+            } else {
+                Image(systemName: "doc")
+                    .foregroundColor(theme.accent)
+            }
         case .url:
             Image(systemName: "link")
                 .foregroundColor(theme.accent)

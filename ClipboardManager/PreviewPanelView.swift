@@ -109,16 +109,10 @@ struct PreviewPanelView: View {
                     }
                     .padding(12)
                 case .file:
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 8) {
                         if let paths = item.filePaths {
                             ForEach(paths, id: \.self) { path in
-                                HStack {
-                                    Image(systemName: "doc")
-                                        .foregroundColor(theme.accent)
-                                    Text(path)
-                                        .font(.system(size: 11, design: .monospaced))
-                                        .foregroundColor(theme.textPrimary)
-                                }
+                                filePreview(path: path)
                             }
                         }
                     }
@@ -139,6 +133,43 @@ struct PreviewPanelView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func filePreview(path: String) -> some View {
+        let url = URL(fileURLWithPath: path)
+        let ext = url.pathExtension.lowercased()
+        let imageExts: Set<String> = ["png", "jpg", "jpeg", "gif", "heic", "heif", "bmp", "tiff", "webp"]
+
+        VStack(alignment: .leading, spacing: 6) {
+            if imageExts.contains(ext), let image = NSImage(contentsOf: url) {
+                Image(nsImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(maxWidth: .infinity, maxHeight: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                HStack(spacing: 8) {
+                    Image(nsImage: NSWorkspace.shared.icon(forFile: path))
+                        .resizable()
+                        .frame(width: 48, height: 48)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(url.lastPathComponent)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(theme.textPrimary)
+                            .lineLimit(1)
+                        Text(ext.uppercased())
+                            .font(.system(size: 10))
+                            .foregroundColor(theme.textSecondary)
+                    }
+                }
+            }
+            Text(path)
+                .font(.system(size: 10, design: .monospaced))
+                .foregroundColor(theme.textSecondary)
+                .lineLimit(2)
+                .textSelection(.enabled)
         }
     }
 

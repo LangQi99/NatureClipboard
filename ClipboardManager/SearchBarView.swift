@@ -36,9 +36,25 @@ struct SearchBarView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(theme.searchBarBackground)
+        .background(
+            WindowDragView()
+                .background(theme.searchBarBackground)
+        )
         .onAppear { isFocused = true }
         .animation(.easeInOut(duration: 0.2), value: searchText.isEmpty)
+    }
+}
+
+struct WindowDragView: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        return WindowDragNSView()
+    }
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+class WindowDragNSView: NSView {
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
     }
 }
 

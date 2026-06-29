@@ -9,6 +9,8 @@ struct MainView: View {
     @State private var appeared = false
     var closeAction: () -> Void
 
+    @State private var listWidth: CGFloat = 500
+
     var theme: ThemeColors { themeManager.colors }
 
     var body: some View {
@@ -39,10 +41,10 @@ struct MainView: View {
                     onFavorite: { store.toggleFavorite($0) }
                 )
                 .environmentObject(themeManager)
-                .frame(width: 380)
+                .frame(width: listWidth)
 
                 if SettingsManager.shared.previewEnabled {
-                    Divider().opacity(0.4)
+                    SplitterHandle(width: $listWidth, minWidth: 240, maxWidth: 560, theme: theme)
                     PreviewPanelView(item: selectedItem)
                         .environmentObject(themeManager)
                         .frame(maxWidth: .infinity)
@@ -86,6 +88,13 @@ struct MainView: View {
             if selectedItem == nil, let first = store.filteredItems.first {
                 selectedItem = first
             }
+            KeyEventBus.shared.onUp = { moveSelection(by: -1) }
+            KeyEventBus.shared.onDown = { moveSelection(by: 1) }
+            KeyEventBus.shared.onReturn = {
+                let target = selectedItem ?? store.filteredItems.first
+                if let item = target { pasteAndClose(item) }
+            }
+            KeyEventBus.shared.onEscape = closeAction
         }
         .onChange(of: store.filteredItems) { _, items in
             if selectedItem == nil || !items.contains(where: { $0.id == selectedItem?.id }) {
@@ -97,6 +106,14 @@ struct MainView: View {
     private func pasteAndClose(_ item: ClipboardItem) {
         closeAction()
         store.pasteItem(item)
+    }
+
+    private func moveSelection(by offset: Int) {
+        let items = store.filteredItems
+        guard !items.isEmpty else { return }
+        let current = selectedItem.flatMap { sel in items.firstIndex(where: { $0.id == sel.id }) } ?? -1
+        let newIndex = max(0, min(items.count - 1, current + offset))
+        selectedItem = items[newIndex]
     }
 
     @ViewBuilder
@@ -262,6 +279,45 @@ struct NatureBackground: View {
             .opacity(alpha)
             .position(x: xPos, y: yPos)
         }
+    }
+}
+
+struct SplitterHandle: View {
+    @Binding var width: CGFloat
+    let minWidth: CGFloat
+    let maxWidth: CGFloat
+    let theme: ThemeColors
+    @State private var dragStartWidth: CGFloat?
+    @State private var hovering = false
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(Color.clear)
+                .frame(width: 8)
+                .contentShape(Rectangle())
+
+            Rectangle()
+                .fill(hovering ? theme.accent.opacity(0.5) : theme.border)
+                .frame(width: hovering ? 2 : 1)
+        }
+        .onHover { hovering in
+            self.hovering = hovering
+            if hovering {
+                NSCursor.resizeLeftRight.push()
+            } else {
+                NSCursor.pop()
+            }
+        }
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { value in
+                    if dragStartWidth == nil { dragStartWidth = width }
+                    let newWidth = (dragStartWidth ?? width) + value.translation.width
+                    width = min(maxWidth, max(minWidth, newWidth))
+                }
+                .onEnded { _ in dragStartWidth = nil }
+        )
     }
 }
 

@@ -7,6 +7,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var panel: FloatingPanel?
     var globalMonitor: Any?
     var localMonitor: Any?
+    var hotKeyRef: EventHotKeyRef?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
@@ -58,25 +59,55 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         panel = FloatingPanel()
     }
 
+    private var eventTap: CFMachPort?
+    private var runLoopSource: CFRunLoopSource?
+
     private func setupHotkey() {
         let options = [kAXTrustedCheckOptionPrompt.takeRetainedValue() as String: true] as CFDictionary
         let trusted = AXIsProcessTrustedWithOptions(options)
         if !trusted {
-            print("Accessibility permission required. Please grant access in System Settings → Privacy & Security → Accessibility.")
+            print("Accessibility permission required.")
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                self?.setupHotkey()
+            }
+            return
         }
 
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.modifierFlags.contains(.command) && event.keyCode == UInt16(kVK_ANSI_E) {
-                DispatchQueue.main.async { self?.togglePanel() }
-            }
+        let mask: CGEventMask = 1 << CGEventType.keyDown.rawValue
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+
+        guard let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: mask,
+            callback: { _, type, event, refcon in
+                guard let refcon = refcon else { return Unmanaged.passUnretained(event) }
+                let delegate = Unmanaged<AppDelegate>.fromOpaque(refcon).takeUnretainedValue()
+                let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+                let flags = event.flags
+                if keyCode == Int64(kVK_ANSI_V)
+                    && flags.contains(.maskCommand)
+                    && flags.contains(.maskShift)
+                    && !flags.contains(.maskAlternate)
+                    && !flags.contains(.maskControl) {
+                    DispatchQueue.main.async {
+                        delegate.togglePanel()
+                    }
+                    return nil
+                }
+                return Unmanaged.passUnretained(event)
+            },
+            userInfo: selfPtr
+        ) else {
+            print("Failed to create CGEvent tap")
+            return
         }
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.modifierFlags.contains(.command) && event.keyCode == UInt16(kVK_ANSI_E) {
-                DispatchQueue.main.async { self?.togglePanel() }
-                return nil
-            }
-            return event
-        }
+
+        eventTap = tap
+        runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        CGEvent.tapEnable(tap: tap, enable: true)
     }
 
     @objc func togglePanel() {
@@ -106,8 +137,51 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+class KeyEventBus: ObservableObject {
+    static let shared = KeyEventBus()
+    var onUp: (() -> Void)?
+    var onDown: (() -> Void)?
+    var onReturn: (() -> Void)?
+    var onEscape: (() -> Void)?
+}
+
 class FloatingPanel: NSPanel {
     private var hostingView: NSHostingView<MainView>?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if flags == [.command, .shift] && event.keyCode == UInt16(kVK_ANSI_V) {
+            (NSApp.delegate as? AppDelegate)?.togglePanel()
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown {
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if flags == [.command, .shift] && event.keyCode == UInt16(kVK_ANSI_V) {
+                (NSApp.delegate as? AppDelegate)?.togglePanel()
+                return
+            }
+            if flags.isEmpty {
+                switch Int(event.keyCode) {
+                case kVK_UpArrow:
+                    KeyEventBus.shared.onUp?()
+                    return
+                case kVK_DownArrow:
+                    KeyEventBus.shared.onDown?()
+                    return
+                case kVK_Return:
+                    if let h = KeyEventBus.shared.onReturn { h(); return }
+                case kVK_Escape:
+                    if let h = KeyEventBus.shared.onEscape { h(); return }
+                default: break
+                }
+            }
+        }
+        super.sendEvent(event)
+    }
 
     init() {
         super.init(
@@ -119,7 +193,7 @@ class FloatingPanel: NSPanel {
 
         isFloatingPanel = true
         level = .floating
-        isMovableByWindowBackground = true
+        isMovableByWindowBackground = false
         titlebarAppearsTransparent = true
         titleVisibility = .hidden
         backgroundColor = .clear
