@@ -60,12 +60,8 @@ struct ItemListView: View {
         ItemRowView(item: item, isSelected: index == selectedIndex, theme: theme)
             .id(item.id)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.001))
             .contentShape(Rectangle())
-            .onTapGesture(count: 2) { onPaste(item) }
-            .onTapGesture(count: 1) {
-                selectedItem = item
-                selectedIndex = index
-            }
             .onDrag({
                 selectedItem = item
                 selectedIndex = index
@@ -73,6 +69,13 @@ struct ItemListView: View {
             }, preview: {
                 dragPreview(for: item)
             })
+            .onTapGesture {
+                selectedItem = item
+                selectedIndex = index
+            }
+            .simultaneousGesture(
+                TapGesture(count: 2).onEnded { onPaste(item) }
+            )
             .contextMenu { contextMenu(for: item) }
     }
 
@@ -101,34 +104,27 @@ struct ItemListView: View {
         case .text, .html, .rtf, .url, .color:
             return NSItemProvider(object: (item.textContent ?? item.urlString ?? item.colorHex ?? "") as NSString)
         case .image:
-            let provider = NSItemProvider()
             if let data = item.imageData {
-                provider.registerDataRepresentation(forTypeIdentifier: "public.png", visibility: .all) { completion in
-                    completion(data, nil)
-                    return nil
-                }
-                if let image = NSImage(data: data) {
-                    provider.registerObject(image, visibility: .all)
-                }
                 let tmp = FileManager.default.temporaryDirectory
                     .appendingPathComponent("clip-\(item.id.uuidString).png")
-                try? data.write(to: tmp)
-                provider.registerFileRepresentation(forTypeIdentifier: "public.png", fileOptions: [], visibility: .all) { completion in
-                    completion(tmp, false, nil)
-                    return nil
+                if !FileManager.default.fileExists(atPath: tmp.path) {
+                    try? data.write(to: tmp)
+                }
+                if let provider = NSItemProvider(contentsOf: tmp) {
+                    provider.suggestedName = "image.png"
+                    return provider
                 }
             }
-            return provider
+            return NSItemProvider()
         case .file:
             if let path = item.filePaths?.first {
                 let url = URL(fileURLWithPath: path)
-                let provider = NSItemProvider()
-                provider.registerFileRepresentation(forTypeIdentifier: "public.file-url", fileOptions: [.openInPlace], visibility: .all) { completion in
-                    completion(url, true, nil)
-                    return nil
+                if FileManager.default.fileExists(atPath: path),
+                   let provider = NSItemProvider(contentsOf: url) {
+                    provider.suggestedName = url.lastPathComponent
+                    return provider
                 }
-                provider.registerObject(url as NSURL, visibility: .all)
-                return provider
+                return NSItemProvider(object: url as NSURL)
             }
             return NSItemProvider()
         }

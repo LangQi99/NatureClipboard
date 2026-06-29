@@ -28,7 +28,7 @@ struct MainView: View {
                 .environmentObject(store)
                 .environmentObject(themeManager)
 
-            HSplitView {
+            HStack(spacing: 0) {
                 ItemListView(
                     items: store.filteredItems,
                     selectedItem: $selectedItem,
@@ -39,12 +39,13 @@ struct MainView: View {
                     onFavorite: { store.toggleFavorite($0) }
                 )
                 .environmentObject(themeManager)
-                .frame(minWidth: 350, idealWidth: 400)
+                .frame(width: 380)
 
                 if SettingsManager.shared.previewEnabled {
+                    Divider().opacity(0.4)
                     PreviewPanelView(item: selectedItem)
                         .environmentObject(themeManager)
-                        .frame(minWidth: 250, idealWidth: 350)
+                        .frame(maxWidth: .infinity)
                 }
             }
 
