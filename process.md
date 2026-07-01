@@ -14,3 +14,4 @@
 - [feat] T-015 启发式 AI 打标接入 pipeline：新增 `AIPipeline.heuristicTag(text:)`（非空→.done / 空→.none）+ 3 用例 TDD；`ClipboardStore.addItem` 仅在新增分支对 text/html/rtf/url 非空 textContent 调用并写回 aiTags/aiStatus，命中去重路径不动
 - [feat] T-002 首次运行 Onboarding：Kit 侧 `OnboardingState` + 3 用例；`OnboardingView` 三步引导；AppDelegate 未完成时先弹引导再挂 hotkey
 - [feat] T-015 HeuristicTagger 接入 AIPipeline：新增 `AIPipeline.heuristicTag(text:)` + 3 用例；`ClipboardStore.addItem` 对新文本条目调用，写回 aiTags/aiStatus
+- [feat] T-014 AI Settings Kit: `AISettings` Codable model + `Keychain` helper + `AISettingsStore` (load/save/apiKey); 4 tests TDD

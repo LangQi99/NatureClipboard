@@ -54,7 +54,12 @@
 - 7 个 swift-testing 用例全绿（前台插电 / 前台无电量 / 后台 / lowPower / 电量 0.15 / 电量 0.20 边界 / 后台+lowPower 优先级）
 - 尚未接入 `ClipboardMonitor` 的 workspace/battery/lowpower 通知（Kit 层先落地，App 层订阅后续 task）
 
-### T-014 AI Tab 设置页（骨架） · feat · integration
+### T-014 AI Tab 设置页 · feat · unit+integration  ✅ Kit 层完成 (2026-07-01)
+
+- `Keychain.swift`：save/load/delete via Security.framework
+- `AISettings.swift`：全字段 model + custom decoder (partial JSON) + `AISettingsStore` (UserDefaults + Keychain)
+- 4 用例 TDD
+- UI (`AISettingsView.swift`) 待下一步
 
 - 新增 `Sources/Settings/AISettingsView.swift`
 - 字段：总开关、Provider 下拉、Base URL、API Key（脱敏）、Model、Timeout、Feature 开关、Trigger、Rate limit、Test connection 按钮
