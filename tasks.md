@@ -32,11 +32,12 @@
 
 ## P0 — AI 基础设施（多 sub-task，逐个 TDD）
 
-### T-010 数据模型扩展 · feat · unit · TDD
+### T-010 数据模型扩展 · feat · unit · TDD  ✅ 完成 (2026-07-01)
 
-- 在 `Models.swift` 的 `ClipboardItem` 追加：`aiTags: [String]`、`aiSummary: String?`、`aiModel: String?`、`aiStatus: AIStatus`、`ocrText: String?`、`ocrLines: [OCRLine]?`、`urlTitle: String?`、`urlSiteName: String?`（默认值确保旧 JSON 反序列化兼容）
-- 新增 enum `AIStatus { case none, queued, running, done, failed }` + `struct OCRLine { rect: CGRect, text: String }`
-- **测试**：`Tests/CoreTests/ModelsCompatibilityTests.swift` 加载 v1 JSON（不含 AI 字段）应成功、字段回填默认值
+- Kit 新增 `AIStatus` enum、`OCRLine` struct、`AIFieldsSnapshot` 向后兼容骨架
+- 4 个 swift-testing 用例：默认值 / roundtrip / 未知 aiStatus 回落 none / 空 JSON 缺失字段
+- `ClipboardItem` 追加 aiTags / aiSummary / aiModel / aiStatus / ocrText / ocrLines / urlTitle / urlSiteName 字段
+- 手写 `init(from decoder:)` 用 `decodeIfPresent`，旧 JSON（无 AI 字段）可正常加载
 
 ### T-011 HeuristicTagger · feat · unit · TDD  ✅ 完成 (2026-07-01)
 
@@ -51,12 +52,12 @@
 - App 层 helper `highlighted(_:query:color:)` 用 ranges 构造 `AttributedString`（背景色 + 下划线）
 - 接入 `ItemRowView` 标题 + `PreviewPanelView` 文本正文
 
-### T-013 ClipboardMonitor 智能降频 · feat · unit · TDD
+### T-013 ClipboardMonitor 智能降频 · feat · unit · TDD  ✅ 完成 (2026-07-01)
 
-- §4.1 v3 追加：app 失焦 1.5s / low power 2s / 电量 <20% 2s / 前台+插电 0.5s
-- 新增 `Sources/Core/MonitorFrequency.swift`：纯函数 `func recommendedInterval(...) -> TimeInterval`
-- **测试**：`Tests/CoreTests/MonitorFrequencyTests.swift` 4 种场景
-- 在 `ClipboardMonitor` 里订阅 workspace/battery/lowpower 通知重设 Timer
+- 新增 `Sources/ClipboardManagerKit/MonitorFrequency.swift`：`public enum MonitorFrequency` + 纯静态函数 `recommendedInterval(foreground:lowPowerMode:batteryLevel:)`
+- 规则：lowPower 或电量 <0.2 → 2.0s；后台 → 1.5s；前台 → 0.5s；优先级 lowPower/lowBattery > 后台 > 前台
+- 7 个 swift-testing 用例全绿（前台插电 / 前台无电量 / 后台 / lowPower / 电量 0.15 / 电量 0.20 边界 / 后台+lowPower 优先级）
+- 尚未接入 `ClipboardMonitor` 的 workspace/battery/lowpower 通知（Kit 层先落地，App 层订阅后续 task）
 
 ### T-014 AI Tab 设置页（骨架） · feat · integration
 

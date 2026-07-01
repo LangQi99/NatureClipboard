@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import ClipboardManagerKit
 
 enum ClipboardItemType: String, Codable, CaseIterable {
     case text
@@ -69,6 +70,14 @@ struct ClipboardItem: Identifiable, Codable, Hashable {
     var title: String?
     var characterCount: Int?
     var wordCount: Int?
+    var aiTags: [String] = []
+    var aiSummary: String?
+    var aiModel: String?
+    var aiStatus: AIStatus = .none
+    var ocrText: String?
+    var ocrLines: [OCRLine]?
+    var urlTitle: String?
+    var urlSiteName: String?
 
     init(type: ClipboardItemType, textContent: String? = nil, htmlContent: String? = nil,
          rtfData: Data? = nil, imageData: Data? = nil, filePaths: [String]? = nil,
@@ -133,6 +142,45 @@ struct ClipboardItem: Identifiable, Codable, Hashable {
         case .url: return .urls
         case .color: return .colors
         }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, type, textContent, htmlContent, rtfData, imageData, filePaths
+        case urlString, colorHex, appName, appBundleId, createdAt, lastUsedAt
+        case useCount, isPinned, isFavorite, tags, title, characterCount, wordCount
+        case aiTags, aiSummary, aiModel, aiStatus, ocrText, ocrLines, urlTitle, urlSiteName
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try c.decode(UUID.self, forKey: .id)
+        self.type = try c.decode(ClipboardItemType.self, forKey: .type)
+        self.textContent = try c.decodeIfPresent(String.self, forKey: .textContent)
+        self.htmlContent = try c.decodeIfPresent(String.self, forKey: .htmlContent)
+        self.rtfData = try c.decodeIfPresent(Data.self, forKey: .rtfData)
+        self.imageData = try c.decodeIfPresent(Data.self, forKey: .imageData)
+        self.filePaths = try c.decodeIfPresent([String].self, forKey: .filePaths)
+        self.urlString = try c.decodeIfPresent(String.self, forKey: .urlString)
+        self.colorHex = try c.decodeIfPresent(String.self, forKey: .colorHex)
+        self.appName = try c.decodeIfPresent(String.self, forKey: .appName)
+        self.appBundleId = try c.decodeIfPresent(String.self, forKey: .appBundleId)
+        self.createdAt = try c.decode(Date.self, forKey: .createdAt)
+        self.lastUsedAt = try c.decode(Date.self, forKey: .lastUsedAt)
+        self.useCount = try c.decodeIfPresent(Int.self, forKey: .useCount) ?? 0
+        self.isPinned = try c.decodeIfPresent(Bool.self, forKey: .isPinned) ?? false
+        self.isFavorite = try c.decodeIfPresent(Bool.self, forKey: .isFavorite) ?? false
+        self.tags = try c.decodeIfPresent([String].self, forKey: .tags) ?? []
+        self.title = try c.decodeIfPresent(String.self, forKey: .title)
+        self.characterCount = try c.decodeIfPresent(Int.self, forKey: .characterCount)
+        self.wordCount = try c.decodeIfPresent(Int.self, forKey: .wordCount)
+        self.aiTags = try c.decodeIfPresent([String].self, forKey: .aiTags) ?? []
+        self.aiSummary = try c.decodeIfPresent(String.self, forKey: .aiSummary)
+        self.aiModel = try c.decodeIfPresent(String.self, forKey: .aiModel)
+        self.aiStatus = try c.decodeIfPresent(AIStatus.self, forKey: .aiStatus) ?? .none
+        self.ocrText = try c.decodeIfPresent(String.self, forKey: .ocrText)
+        self.ocrLines = try c.decodeIfPresent([OCRLine].self, forKey: .ocrLines)
+        self.urlTitle = try c.decodeIfPresent(String.self, forKey: .urlTitle)
+        self.urlSiteName = try c.decodeIfPresent(String.self, forKey: .urlSiteName)
     }
 }
 
