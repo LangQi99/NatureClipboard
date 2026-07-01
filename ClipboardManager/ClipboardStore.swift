@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import Combine
+import ClipboardManagerKit
 
 class ClipboardStore: ObservableObject {
     static let shared = ClipboardStore()
@@ -67,7 +68,14 @@ class ClipboardStore: ObservableObject {
             existing.useCount += 1
             items.insert(existing, at: 0)
         } else {
-            items.insert(item, at: 0)
+            var newItem = item
+            if [.text, .html, .rtf, .url].contains(newItem.type),
+               let text = newItem.textContent, !text.isEmpty {
+                let result = AIPipeline.heuristicTag(text: text)
+                newItem.aiTags = result.tags
+                newItem.aiStatus = result.status
+            }
+            items.insert(newItem, at: 0)
         }
 
         while items.count > maxItems {
