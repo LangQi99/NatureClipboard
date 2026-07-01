@@ -22,8 +22,11 @@ struct SettingsView: View {
             ExclusionsSettingsView()
                 .environmentObject(settings)
                 .tabItem { Label("Exclusions", systemImage: "nosign") }
+
+            AISettingsView()
+                .tabItem { Label("AI", systemImage: "brain") }
         }
-        .frame(width: 500, height: 400)
+        .frame(width: 500, height: 450)
     }
 }
 
