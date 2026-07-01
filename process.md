@@ -5,3 +5,4 @@
 ## 2026-07-01
 
 - [docs] 引入 v3.1 PRD 覆盖旧 prd.md；新增 tasks.md、AGENTS.md、process.md，建立工程纪律
+- [fix] T-001 修复搜索框聚焦时上下键失效：拆出 `KeyRouting` 纯函数 + swift-testing 8 用例；`AppDelegate` local monitor 直接改写 `store.currentSelection`

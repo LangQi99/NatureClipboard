@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import Carbon.HIToolbox
+import ClipboardManagerKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
@@ -108,6 +109,35 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
+
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            guard let panel = (NSApp.delegate as? AppDelegate)?.panel, panel.isVisible else { return event }
+            let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            guard flags.isEmpty else { return event }
+            let store = ClipboardStore.shared
+            let items = store.filteredItems
+            let currentIndex = store.currentSelection.flatMap { sel in items.firstIndex(where: { $0.id == sel.id }) }
+            switch Int(event.keyCode) {
+            case kVK_UpArrow:
+                if let idx = KeyRouting.nextIndex(direction: .up, currentIndex: currentIndex, count: items.count) {
+                    store.currentSelection = items[idx]
+                }
+                return nil
+            case kVK_DownArrow:
+                if let idx = KeyRouting.nextIndex(direction: .down, currentIndex: currentIndex, count: items.count) {
+                    store.currentSelection = items[idx]
+                }
+                return nil
+            case kVK_Return:
+                if let h = KeyEventBus.shared.onReturn { h(); return nil }
+                return event
+            case kVK_Escape:
+                if let h = KeyEventBus.shared.onEscape { h(); return nil }
+                return event
+            default:
+                return event
+            }
+        }
     }
 
     @objc func togglePanel() {
@@ -227,6 +257,7 @@ class FloatingPanel: NSPanel {
 
     func animateIn() {
         previousApp = NSWorkspace.shared.frontmostApplication
+        NotificationCenter.default.post(name: .clipboardPanelWillShow, object: nil)
         alphaValue = 0
         center()
         let finalFrame = frame
@@ -261,4 +292,9 @@ class FloatingPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+}
+
+
+extension Notification.Name {
+    static let clipboardPanelWillShow = Notification.Name("clipboardPanelWillShow")
 }

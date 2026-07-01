@@ -9,6 +9,7 @@ class ClipboardStore: ObservableObject {
     @Published var snippets: [Snippet] = []
     @Published var selectedCategory: ClipboardCategory = .all
     @Published var searchText: String = ""
+    @Published var currentSelection: ClipboardItem?
 
     private let monitor = ClipboardMonitor()
     private let storageURL: URL

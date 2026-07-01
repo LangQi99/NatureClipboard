@@ -11,18 +11,11 @@
 
 ## P0 — 阻塞用户的问题
 
-### T-001 修复搜索框聚焦时上下键无法切换列表 · fix · unit+integration · TDD
+### T-001 修复搜索框聚焦时上下键无法切换列表 · fix · unit+integration · TDD  ✅ 完成 (2026-07-01)
 
-- **背景**：v3 PRD §8 P0 第 1 条
-- **测试先行**：
-  - `Tests/CoreTests/KeyRoutingTests.swift`：给一个 mock `ClipboardStore` 和 8 条 items，模拟触发 up/down NSEvent（keyCode = 126/125），断言 `currentSelection` 按预期步进
-- **实现**：
-  - 在 `AppDelegate.setupHotkey()` 里增加/修正 `NSEvent.addLocalMonitorForEvents`，在 keyDown 事件到 `sendEvent` 前拦截 up/down/return/esc
-  - 逻辑直接读写 `ClipboardStore.shared.currentSelection`，不依赖 View 闭包
-  - `panel.isVisible` 且无修饰键才拦截
-- **验证**：
-  - 面板打开、焦点在搜索框，按上下键选中变化、鼠标位置不影响
-  - 手动跑 `swift test` 全绿
+- 拆出 `Sources/ClipboardManagerKit/KeyRouting.swift`（纯函数 `nextIndex(direction:currentIndex:count:)`）
+- 8 个 swift-testing 单元测试全部通过（`swift test`）
+- `AppDelegate` 的 `NSEvent.addLocalMonitorForEvents` 走该函数直接读写 `ClipboardStore.shared.currentSelection`，绕开 TextField 焦点吞噬
 
 ### T-002 首次运行 Onboarding + 辅助功能权限引导 · feat · integration+snapshot
 

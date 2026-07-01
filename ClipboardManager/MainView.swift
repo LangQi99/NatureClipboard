@@ -3,7 +3,7 @@ import SwiftUI
 struct MainView: View {
     @StateObject private var store = ClipboardStore.shared
     @StateObject private var themeManager = ThemeManager.shared
-    @State private var selectedItem: ClipboardItem?
+// store.currentSelection now lives on store.currentSelection
     @State private var showingSnippets = false
     @State private var selectedItems: Set<ClipboardItem> = []
     @State private var appeared = false
@@ -16,7 +16,7 @@ struct MainView: View {
     var body: some View {
         VStack(spacing: 0) {
             SearchBarView(searchText: $store.searchText, closeAction: closeAction, onSubmit: {
-                let target = selectedItem ?? store.filteredItems.first
+                let target = store.currentSelection ?? store.filteredItems.first
                 if let item = target {
                     pasteAndClose(item)
                 }
@@ -33,7 +33,7 @@ struct MainView: View {
             HStack(spacing: 0) {
                 ItemListView(
                     items: store.filteredItems,
-                    selectedItem: $selectedItem,
+                    selectedItem: $store.currentSelection,
                     selectedItems: $selectedItems,
                     onPaste: { item in pasteAndClose(item) },
                     onDelete: { store.deleteItem($0) },
@@ -45,7 +45,7 @@ struct MainView: View {
 
                 if SettingsManager.shared.previewEnabled {
                     SplitterHandle(width: $listWidth, minWidth: 240, maxWidth: 560, theme: theme)
-                    PreviewPanelView(item: selectedItem)
+                    PreviewPanelView(item: store.currentSelection)
                         .environmentObject(themeManager)
                         .frame(maxWidth: .infinity)
                 }
@@ -85,21 +85,33 @@ struct MainView: View {
                 .environmentObject(store)
         }
         .onAppear {
-            if selectedItem == nil, let first = store.filteredItems.first {
-                selectedItem = first
+            if store.currentSelection == nil, let first = store.filteredItems.first {
+                store.currentSelection = first
             }
             KeyEventBus.shared.onUp = { moveSelection(by: -1) }
             KeyEventBus.shared.onDown = { moveSelection(by: 1) }
             KeyEventBus.shared.onReturn = {
-                let target = selectedItem ?? store.filteredItems.first
+                let target = store.currentSelection ?? store.filteredItems.first
                 if let item = target { pasteAndClose(item) }
             }
             KeyEventBus.shared.onEscape = closeAction
         }
         .onChange(of: store.filteredItems) { _, items in
-            if selectedItem == nil || !items.contains(where: { $0.id == selectedItem?.id }) {
-                selectedItem = items.first
+            if store.currentSelection == nil || !items.contains(where: { $0.id == store.currentSelection?.id }) {
+                store.currentSelection = items.first
             }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .clipboardPanelWillShow)) { _ in
+            store.searchText = ""
+            store.selectedCategory = .all
+            store.currentSelection = store.filteredItems.first
+            KeyEventBus.shared.onUp = { moveSelection(by: -1) }
+            KeyEventBus.shared.onDown = { moveSelection(by: 1) }
+            KeyEventBus.shared.onReturn = {
+                let target = store.currentSelection ?? store.filteredItems.first
+                if let item = target { pasteAndClose(item) }
+            }
+            KeyEventBus.shared.onEscape = closeAction
         }
     }
 
@@ -113,9 +125,9 @@ struct MainView: View {
     private func moveSelection(by offset: Int) {
         let items = store.filteredItems
         guard !items.isEmpty else { return }
-        let current = selectedItem.flatMap { sel in items.firstIndex(where: { $0.id == sel.id }) } ?? -1
+        let current = store.currentSelection.flatMap { sel in items.firstIndex(where: { $0.id == sel.id }) } ?? -1
         let newIndex = max(0, min(items.count - 1, current + offset))
-        selectedItem = items[newIndex]
+        store.currentSelection = items[newIndex]
     }
 
     @ViewBuilder
