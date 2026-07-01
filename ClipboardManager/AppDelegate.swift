@@ -9,15 +9,41 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var globalMonitor: Any?
     var localMonitor: Any?
     var hotKeyRef: EventHotKeyRef?
+    var onboardingWindow: NSWindow?
+    let onboardingState = OnboardingState()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBar()
         setupPanel()
-        setupHotkey()
         NSApp.setActivationPolicy(.accessory)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.panel?.show()
+        if onboardingState.hasCompleted {
+            setupHotkey()
+        } else {
+            showOnboarding()
         }
+    }
+
+    private func showOnboarding() {
+        let hosting = NSHostingController(rootView: OnboardingView { [weak self] in
+            self?.finishOnboarding()
+        })
+        let window = NSWindow(contentViewController: hosting)
+        window.styleMask = [.titled, .closable]
+        window.title = "Welcome"
+        window.isReleasedWhenClosed = false
+        window.center()
+        window.level = .floating
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        onboardingWindow = window
+    }
+
+    private func finishOnboarding() {
+        onboardingState.complete()
+        onboardingWindow?.close()
+        onboardingWindow = nil
+        setupHotkey()
+        panel?.animateIn()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {

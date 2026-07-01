@@ -17,18 +17,13 @@
 - 8 个 swift-testing 单元测试全部通过（`swift test`）
 - `AppDelegate` 的 `NSEvent.addLocalMonitorForEvents` 走该函数直接读写 `ClipboardStore.shared.currentSelection`，绕开 TextField 焦点吞噬
 
-### T-002 首次运行 Onboarding + 辅助功能权限引导 · feat · integration+snapshot
+### T-002 首次运行 Onboarding + 辅助功能权限引导 · feat · integration+unit  ✅ 完成 (2026-07-01)
 
-- **背景**：v3 PRD §8 P0 第 2 条 + §9 P0
-- **测试**：
-  - `Tests/CoreTests/OnboardingStateTests.swift` 断言 `SettingsManager.hasCompletedOnboarding` 默认 false、`completeOnboarding()` 后为 true 并持久化
-  - `Tests/SnapshotTests/OnboardingSnapshotTests.swift`（引入 swift-snapshot-testing 时补，本 task 只搭结构）
-- **实现**：
-  - `SettingsManager` 增加 `hasCompletedOnboarding` UserDefaults 项
-  - 新增 `OnboardingView.swift`：3 步引导（欢迎 → 授权辅助功能 → 完成）
-  - App 启动时若未完成，展示 modal onboarding；用户点击 "Open System Settings" 打开辅助功能面板
-  - AI 首次开启弹窗（PRD §4.10）在 Settings AI Tab 内做（P0 的 AI Tab task 里再补）
-- **验证**：`defaults delete com.bytedance.ClipboardManager hasCompletedOnboarding` 后重启会看到引导
+- Kit 新增 `OnboardingState` + `OnboardingStorage` 协议（依赖注入，可测）
+- 3 个 swift-testing 用例：默认未完成、complete 持久化、从 store 恢复
+- 新增 `OnboardingView.swift` 3 步：欢迎 → 辅助功能引导（可打开系统设置） → 完成
+- `AppDelegate.applicationDidFinishLaunching`：`hasCompleted == false` 时弹 modal 引导；完成后再 setupHotkey + 展示面板
+- 验证：`defaults delete com.bytedance.ClipboardManager hasCompletedOnboarding` 后重启触发引导
 
 ## P0 — AI 基础设施（多 sub-task，逐个 TDD）
 
@@ -67,11 +62,12 @@
 - 首次开启弹强确认弹窗
 - **测试**：`Tests/AITests/AISettingsPersistenceTests.swift` 读写往返
 
-### T-015 启发式 AI 打标接入 pipeline · feat · integration · TDD
+### T-015 启发式 AI 打标接入 pipeline · feat · integration · TDD  ✅ 完成 (2026-07-01)
 
-- 新增 `Sources/AI/AIPipeline.swift`：`func process(_ item: ClipboardItem) async`
-- 目前只跑 HeuristicTagger → 写回 store
-- **测试**：`Tests/AITests/AIPipelineTests.swift` 端到端 (mock LLMClient)
+- 新增 `Sources/ClipboardManagerKit/AIPipeline.swift`：`AIPipeline.heuristicTag(text:) -> (tags, status)` 纯函数，非空 tags 时 status=.done，空则 .none
+- 3 个 swift-testing 用例（URL / 普通短单词 / SQL）全绿
+- `ClipboardStore.addItem` 只在新增分支（非命中去重）里，对 text/html/rtf/url 且 textContent 非空的 item 调用 pipeline 并写回 aiTags/aiStatus 后再插入
+- 目前只跑 HeuristicTagger；LLM/异步 pipeline 留给后续 task
 
 ## P1 — LLM 打标 + Ask AI + FTS5
 
