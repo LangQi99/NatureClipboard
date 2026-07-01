@@ -44,12 +44,12 @@
 - 17 个 swift-testing 用例全绿
 - 未接入 pipeline（等 T-010 数据模型扩展后再写回 item）
 
-### T-012 搜索命中高亮（文本） · feat · unit · TDD
+### T-012 搜索命中高亮（文本） · feat · unit · TDD  ✅ 完成 (2026-07-01)
 
-- 新增 `Sources/Search/Highlighter.swift`：`func highlight(text: String, query: String) -> AttributedString`
-- 规则：大小写不敏感、多关键词空格分隔、命中处添加 `.backgroundColor = theme.accent.opacity(0.35)` + `.underlineStyle = .single`
-- **测试**：`Tests/SearchTests/HighlighterTests.swift`
-- 在 `ItemRowView.displayTitle` 和 `PreviewPanelView` 文本渲染处替换为 `AttributedString`
+- 纯函数 `Highlighter.matches(text:query:)` 返回大小写不敏感、多关键词、非重叠的 `Range<String.Index>` 数组
+- 9 个 swift-testing 用例（emoji/中文/多term/边界）全绿
+- App 层 helper `highlighted(_:query:color:)` 用 ranges 构造 `AttributedString`（背景色 + 下划线）
+- 接入 `ItemRowView` 标题 + `PreviewPanelView` 文本正文
 
 ### T-013 ClipboardMonitor 智能降频 · feat · unit · TDD
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import ClipboardManagerKit
 
 struct PreviewPanelView: View {
     let item: ClipboardItem?
@@ -88,7 +89,7 @@ struct PreviewPanelView: View {
             VStack(alignment: .leading) {
                 switch item.type {
                 case .text, .html, .rtf:
-                    Text(item.textContent ?? "")
+                    Text(highlighted(item.textContent ?? "", query: ClipboardStore.shared.searchText, color: theme.accent.opacity(0.35)))
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundColor(theme.textPrimary)
                         .textSelection(.enabled)

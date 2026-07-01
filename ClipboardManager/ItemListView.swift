@@ -1,4 +1,5 @@
 import SwiftUI
+import ClipboardManagerKit
 
 struct ItemListView: View {
     let items: [ClipboardItem]
@@ -42,7 +43,7 @@ struct ItemListView: View {
 
     @ViewBuilder
     private func rowView(for item: ClipboardItem, at index: Int) -> some View {
-        ItemRowView(item: item, isSelected: selectedItem?.id == item.id, theme: theme)
+        ItemRowView(item: item, isSelected: selectedItem?.id == item.id, theme: theme, query: ClipboardStore.shared.searchText)
             .id(item.id)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.white.opacity(0.001))
@@ -159,6 +160,7 @@ struct ItemRowView: View {
     let item: ClipboardItem
     var isSelected: Bool = false
     var theme: ThemeColors
+    var query: String = ""
 
     var body: some View {
         HStack(spacing: 10) {
@@ -169,7 +171,7 @@ struct ItemRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
-                    Text(item.displayTitle)
+                    Text(highlightedTitle)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(theme.textPrimary)
                         .lineLimit(1)
@@ -276,6 +278,10 @@ struct ItemRowView: View {
             .clipShape(Capsule())
             .foregroundColor(theme.textSecondary)
     }
+
+    private var highlightedTitle: AttributedString {
+        highlighted(item.displayTitle, query: query, color: theme.accent.opacity(0.35))
+    }
 }
 
 extension Color {
@@ -302,4 +308,18 @@ extension Date {
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: self, relativeTo: Date())
     }
+}
+
+
+func highlighted(_ text: String, query: String, color: Color) -> AttributedString {
+    var attr = AttributedString(text)
+    let ranges = Highlighter.matches(text: text, query: query)
+    guard !ranges.isEmpty else { return attr }
+    for r in ranges {
+        if let attrRange = Range(r, in: attr) {
+            attr[attrRange].backgroundColor = color
+            attr[attrRange].underlineStyle = .single
+        }
+    }
+    return attr
 }
