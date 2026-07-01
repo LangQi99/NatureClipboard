@@ -38,12 +38,11 @@
 - 新增 enum `AIStatus { case none, queued, running, done, failed }` + `struct OCRLine { rect: CGRect, text: String }`
 - **测试**：`Tests/CoreTests/ModelsCompatibilityTests.swift` 加载 v1 JSON（不含 AI 字段）应成功、字段回填默认值
 
-### T-011 HeuristicTagger · feat · unit · TDD
+### T-011 HeuristicTagger · feat · unit · TDD  ✅ 完成 (2026-07-01)
 
-- 新增 `Sources/AI/HeuristicTagger.swift`，接口：`func tag(_ item: ClipboardItem) -> [String]`
-- 覆盖 §4.12.2 表格：URL / hex / rgb / hsl / base64 / code / SQL / error stack / email / long text / file 扩展名等
-- **测试**：`Tests/AITests/HeuristicTaggerTests.swift`，每条规则一个 test method
-- 结果写回 item 由后续 AIPipeline 处理，本 task 只做纯函数
+- 纯函数 `HeuristicTagger.tags(forText:)`，覆盖 URL / hex / rgb-hsl / email / error / SQL / JSON / HTML / Swift / Python / 长文本
+- 17 个 swift-testing 用例全绿
+- 未接入 pipeline（等 T-010 数据模型扩展后再写回 item）
 
 ### T-012 搜索命中高亮（文本） · feat · unit · TDD
 
